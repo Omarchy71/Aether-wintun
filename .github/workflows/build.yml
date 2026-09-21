@@ -185,10 +185,12 @@ jobs:
             "scripts/smoke-test.ps1"
             "scripts/sign.ps1"
             "scripts/make-persian-isl.ps1"
+            "scripts/core-rollback.ps1"
             ".github/release-notes.md"
             "README.md"
             "README.fa.md"
             "UPGRADE-1.2.5.md"
+            "UPGRADE-1.2.6.md"
             "SECURITY-AUDIT.md"
             "LICENSE"
           )

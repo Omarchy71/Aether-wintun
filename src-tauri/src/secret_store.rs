@@ -155,7 +155,24 @@ fn unprotect(sealed: &[u8]) -> Result<Vec<u8>> {
             CRYPTPROTECT_UI_FORBIDDEN,
             &mut output,
         )
-        .map_err(|e| anyhow!("CryptUnprotectData failed: {e}"))?;
+        .map_err(|e| {
+            // CRYPTPROTECT_UI_FORBIDDEN + یک خطای DPAPI معمولی یعنی
+            // پروفایل کاربر قابل‌دسترس نیست (مثلاً بعد از بازنشانی
+            // ویندوز یا کپی secrets.bin به ماشین دیگر). مقدار sealed
+            // بی‌ارزش است — کلید را فراموش کرده‌ایم و کاربر باید
+            // مجدداً وارد شود. این لاگ می‌گوید دقیقاً این را.
+            DiagnosticsLog::w(
+                "ai",
+                &format!(
+                    "DPAPI failed to decrypt secrets (err {}): the key on \
+                     disk is unrecoverable — this happens after a Windows \
+                     reinstall or moving secrets.bin to another machine. \
+                     Re-enter your Gemini key.",
+                    e
+                ),
+            );
+            anyhow!("CryptUnprotectData failed: {e}")
+        })?;
         let plain = std::slice::from_raw_parts(output.pbData, output.cbData as usize).to_vec();
         LocalFree(windows::Win32::Foundation::HLOCAL(output.pbData as *mut _));
         Ok(plain)

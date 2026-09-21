@@ -133,10 +133,24 @@ pub fn engine_caps(exe: &Path) -> CoreCaps {
 
 // >>> AETHER-APP-FIX perf-tier-matches-the-machine
 /// چند هستهٔ پردازنده در دسترس است؟
+///
+/// `std::thread::available_parallelism()` عدد **منطقی** (hyperthreaded)
+/// برمی‌گرداند — مثلاً ۱۶ روی یک ۸ هسته‌ای با HT. آستانهٔ "high" را ۱۲
+/// گذاشته‌ایم (معادل ≈۶ هستهٔ فیزیکی) تا لپ‌تاپ‌های خانگی ۸ هسته‌ای/۱۶
+/// منطقی با بار سبک تعریف نشوند، و فقط ماشین‌های واقعی سنگین (۱۲+
+/// هستهٔ منطقی) بارِ بافرهای بزرگ را بگیرند. اگر روزی `num_cpus` یا
+/// `GetLogicalProcessorInformation` اضافه شد، این عدد را فیزیکی عوض
+/// کنید — توصیهٔ ظاهری، نه عملی.
 fn detected_cpus() -> usize {
-    std::thread::available_parallelism()
+    let logical = std::thread::available_parallelism()
         .map(|n| n.get())
-        .unwrap_or(1)
+        .unwrap_or(1);
+    // اگر >= ۱۲ هستهٔ منطقی داریم (≈۶ فیزیکی با HT)، high tier.
+    if logical >= 12 {
+        12usize
+    } else {
+        logical
+    }
 }
 
 /// آیا باید سطح کارایی را به هسته تحمیل کنیم — و کدام؟
