@@ -31,9 +31,10 @@ static HOP: Mutex<Option<String>> = Mutex::new(None);
 
 /// نشستِ تازه، اندپوینتِ تازه. بی این، کارت نشانیِ نشستِ قبلی را نشان می‌دهد.
 pub fn reset() {
-    if let Ok(mut hop) = HOP.lock() {
-        *hop = None;
-    }
+    // بازیابی از mutex poisoned: اگر تست قبلی crash شد،
+    // lock قفل نمی‌شود. با into_inner مالیت را می‌گیریم.
+    let mut hop = HOP.lock().unwrap_or_else(|p| p.into_inner());
+    *hop = None;
 }
 
 /// یک سطرِ لاگ. برای هر سطرِ نامربوط با یک `contains` برمی‌گردد.
@@ -45,9 +46,8 @@ pub fn ingest(line: &str) {
         let token = rest.split_whitespace().next().unwrap_or_default();
         // `to_string` فقط پس از آنکه ثابت شد نشانی است — نه پیش از آن.
         if let Ok(addr) = token.parse::<SocketAddr>() {
-            if let Ok(mut hop) = HOP.lock() {
-                *hop = Some(addr.to_string());
-            }
+            let mut hop = HOP.lock().unwrap_or_else(|p| p.into_inner());
+            *hop = Some(addr.to_string());
             return;
         }
     }
@@ -55,7 +55,8 @@ pub fn ingest(line: &str) {
 
 /// `ip:port`ِ نخستین هاپ، یا `None` وقتی هنوز چیزی ثابت نشده.
 pub fn get() -> Option<String> {
-    HOP.lock().ok().and_then(|hop| hop.clone())
+    let hop = HOP.lock().unwrap_or_else(|p| p.into_inner());
+    hop.clone()
 }
 
 #[cfg(test)]
